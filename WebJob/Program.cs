@@ -14,6 +14,18 @@ namespace WebJob
 {
 	class Program
 	{
+		struct SentEmail {
+
+			public object ID;
+			public DateTime Time;
+
+			public SentEmail(object id, DateTime time)
+			{
+				this.ID = id;
+				this.Time = time;
+			}
+		}
+
 		static void Main(string[] args)
 		{
 			while (true)
@@ -29,6 +41,8 @@ namespace WebJob
 					var timeParam = updateCmd.Parameters.Add("@now", SqlDbType.DateTime);
 					var idParam = updateCmd.Parameters.Add("@id", SqlDbType.Int);
 					updateCmd.Prepare();
+
+					List<SentEmail> sentEmails = new List<SentEmail>();
 
 					using (var reader = selectCmd.ExecuteReader())
 					{
@@ -48,17 +62,18 @@ namespace WebJob
 												 body: reader["Body"].ToString());
 
 								// TODO: Write EmailQueue.Sent to DB
-								timeParam.Value = DateTime.Now;
-								idParam.Value = reader["ID"];
-
-								if (updateCmd.ExecuteNonQuery() != 1) {
-									throw new InvalidOperationException("Failed to set Sent value in DB");
-								}
-
-
+								sentEmails.Add(new SentEmail(reader["ID"], DateTime.Now));
 
 								Console.WriteLine($"Email ID:{reader["ID"]} sent...");
 							}
+						}
+					}
+
+					foreach (var email in sentEmails) {
+						idParam.Value = email.ID;
+						timeParam.Value = email.Time;
+						if (updateCmd.ExecuteNonQuery() != 1) {
+							throw new InvalidOperationException("Failed to update Sent field in DB");
 						}
 					}
 				}
