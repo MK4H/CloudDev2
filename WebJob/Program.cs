@@ -8,6 +8,7 @@ using System.Net.Mail;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Data;
 
 namespace WebJob
 {
@@ -23,9 +24,13 @@ namespace WebJob
 				{
 					conn.Open();
 
-					var cmd = new SqlCommand("SELECT * FROM EmailQueue WHERE Sent IS NULL", conn);
+					var selectCmd = new SqlCommand("SELECT * FROM EmailQueue WHERE Sent IS NULL", conn);
+					var updateCmd = new SqlCommand("UPDATE [dbo].[EmailQueue] SET [Sent] = @now WHERE [ID] = @id", conn);
+					var timeParam = updateCmd.Parameters.Add("@now", SqlDbType.DateTime);
+					var idParam = updateCmd.Parameters.Add("@id", SqlDbType.Int);
+					updateCmd.Prepare();
 
-					using (var reader = cmd.ExecuteReader())
+					using (var reader = selectCmd.ExecuteReader())
 					{
 						while (reader.Read())
 						{
@@ -43,6 +48,14 @@ namespace WebJob
 												 body: reader["Body"].ToString());
 
 								// TODO: Write EmailQueue.Sent to DB
+								timeParam.Value = DateTime.Now;
+								idParam.Value = reader["ID"];
+
+								if (updateCmd.ExecuteNonQuery() != 1) {
+									throw new InvalidOperationException("Failed to set Sent value in DB");
+								}
+
+
 
 								Console.WriteLine($"Email ID:{reader["ID"]} sent...");
 							}
