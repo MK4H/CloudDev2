@@ -11,6 +11,8 @@
     <div>
         <asp:Label ID="MyLabel" runat="server" />
     </div>
+    <asp:FileUpload ID="MyFileUpload" runat="server" />
+    <asp:Button ID="GoButton" Text="GO!" OnClick="GoButton_Click" runat="server" />
 </form>
 </body>
 </html>
